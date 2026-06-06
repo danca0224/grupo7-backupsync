@@ -158,7 +158,7 @@ resource "aws_s3_bucket_replication_configuration" "replicacion" {
     }
 
     delete_marker_replication {
-      status = "Enabled"
+      status = "Disabled"
     }
   }
 }
