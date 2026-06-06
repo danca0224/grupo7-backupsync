@@ -220,7 +220,7 @@ resource "aws_cloudwatch_metric_alarm" "alarma_numero_objetos" {
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   threshold           = 100
-  period              = 86400
+  period              = 60
   statistic           = "Average"
   namespace           = "AWS/S3"
   metric_name         = "NumberOfObjects"
