@@ -162,3 +162,82 @@ resource "aws_s3_bucket_replication_configuration" "replicacion" {
     }
   }
 }
+
+# ============================================================
+# PUNTOS EXTRA - LIFECYCLE EN BUCKET DE RESPALDO
+# Mover objetos a GLACIER_IR a los 30 días y eliminarlos a los 90
+# ============================================================
+
+resource "aws_s3_bucket_lifecycle_configuration" "lifecycle_respaldo" {
+  bucket = aws_s3_bucket.respaldo.id
+
+  rule {
+    id     = "grupo7-lifecycle-respaldo"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    transition {
+      days          = 30
+      storage_class = "GLACIER_IR"
+    }
+
+    expiration {
+      days = 90
+    }
+  }
+
+  depends_on = [
+    aws_s3_bucket_versioning.versioning_respaldo
+  ]
+}
+
+# ============================================================
+# PUNTOS EXTRA - SNS PARA RECIBIR ALERTAS DE CLOUDWATCH
+# ============================================================
+
+resource "aws_sns_topic" "alertas" {
+  name = "grupo7-alertas-${var.environment}"
+
+  tags = {
+    Name        = "grupo7-alertas"
+    Environment = var.environment
+    Project     = "BackupSync"
+    Group       = "7"
+  }
+}
+
+# ============================================================
+# PUNTOS EXTRA - ALARMA CLOUDWATCH
+# Alerta cuando el bucket principal supera 100 objetos
+# ============================================================
+
+resource "aws_cloudwatch_metric_alarm" "alarma_numero_objetos" {
+  alarm_name          = "grupo7-alarma-objetos-s3-${var.environment}"
+  alarm_description   = "Alerta cuando el bucket principal supera 100 objetos"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = 100
+  period              = 86400
+  statistic           = "Average"
+  namespace           = "AWS/S3"
+  metric_name         = "NumberOfObjects"
+
+  dimensions = {
+    BucketName  = aws_s3_bucket.principal.bucket
+    StorageType = "AllStorageTypes"
+  }
+
+  alarm_actions = [
+    aws_sns_topic.alertas.arn
+  ]
+
+  tags = {
+    Name        = "grupo7-alarma-objetos-s3"
+    Environment = var.environment
+    Project     = "BackupSync"
+    Group       = "7"
+  }
+}
